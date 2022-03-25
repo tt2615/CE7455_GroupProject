@@ -1,3 +1,7 @@
+##### CHANGED: suppress depreciated warnings
+import warnings
+warnings.filterwarnings(action="ignore", message='.*deprecated.*') 
+
 import time, argparse, math, os, sys, pickle
 import torch
 import torch.nn as nn
@@ -21,7 +25,7 @@ class Config(object):
     nlayers = 1
     lr = 0.001
     epochs = 10
-    batch_size = 240
+    batch_size = 16 ##### CHANGED: from 240 to 16 to reduce memory consumption
     dropout = 0
     bidirectional = True
     relative_data_path = '/data/train.dat'
@@ -72,7 +76,8 @@ if torch.cuda.is_available():
 config = Config()
 #config = ConfigTest()
 
-cwd = os.getcwd()
+# cwd = os.getcwd()
+cwd = '../' ##### CHANGED: change to relative path to cope with windows system path
 data_path = cwd + config.relative_data_path
 vectorizer = Vectorizer(min_frequency=config.min_freq)
 abstracts = headline2abstractdataset(data_path, vectorizer, args.cuda, max_len=1000)
@@ -97,7 +102,7 @@ optimizer = optim.Adam(model.parameters(), lr=config.lr)
 
 # Mask variable
 def _mask(prev_generated_seq):
-    prev_mask = torch.eq(prev_generated_seq, 1)
+    prev_mask = torch.eq(prev_generated_seq, 1).double() ##### CHANGED: convert bool tensor to double to prevent error: 
     lengths = torch.argmax(prev_mask,dim=1)
     max_len = prev_generated_seq.size(1)
     mask = []
@@ -142,6 +147,7 @@ def train_epoches(dataset, model, n_epochs, teacher_forcing_ratio):
     model.train(True)
     prev_epoch_loss_list = [100] * config.num_exams
     for epoch in range(1, n_epochs + 1):
+        print("epoch: {}".format(epoch)) ##### CHANGED: add debug print
         epoch_examples_total = 0
         epoch_loss_list = [0] * config.num_exams
         for batch_idx, (source, target, input_lengths) in enumerate(train_loader):
@@ -155,6 +161,9 @@ def train_epoches(dataset, model, n_epochs, teacher_forcing_ratio):
             epoch_examples_total += num_examples
             for i in range(config.num_exams):
                 epoch_loss_list[i] += loss_list[i] * num_examples
+
+            if batch_idx != 0 and batch_idx % 200 == 0: ##### CHANGED: add debug print
+                print("batch: {}".format(batch_idx))
 
         for i in range(config.num_exams):
             epoch_loss_list[i] /= float(epoch_examples_total)
