@@ -10,17 +10,21 @@ import torch.optim as optim
 import numpy as np
 from torch.backends import cudnn
 from utils.utils import Vectorizer, headline2abstractdataset
+from utils.fb_seq2seq import FbSeq2seq
+from utils.predictor import Predictor
 
 ### NOTE: import embedder, encoder and decoders here
-from utils.fb_seq2seq import FbSeq2seq
+# baseline
+from embedder.NormalEmbedder import NormalEmbedder
 from encoder.EncoderRNN import EncoderRNN
 from decoder.DecoderRNNFB import DecoderRNNFB
-from utils.predictor import Predictor
+
 from pprint import pprint
 sys.path.insert(0,'..')
 from eval import Evaluate
 
 
+### NOTE: adjust/add hyperparameters here
 class Config(object):
     cell = "GRU"
     emsize = 512
@@ -57,7 +61,7 @@ class ConfigTest(object):
 
 cudnn.benchmark = True
 parser = argparse.ArgumentParser(description='seq2seq model')
-parser.add_argument('--seed', type=int, default=1111,
+parser.add_argument('--seed', type=int, default=2022,
                     help='random seed')
 parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
@@ -86,7 +90,10 @@ abstracts = headline2abstractdataset(data_path, vectorizer, args.cuda, max_len=1
 print("number of training examples: %d" % len(abstracts))
 
 vocab_size = abstracts.vectorizer.vocabulary_size
-embedding = nn.Embedding(vocab_size, config.emsize, padding_idx=0)
+
+### NOTE: change embedder, encoder, decoder here
+#baseline
+embedding = NormalEmbedder(vocab_size, config.emsize, padding_idx=0)
 encoder_title = EncoderRNN(vocab_size, embedding, abstracts.head_len, config.emsize, input_dropout_p=config.dropout,
                      n_layers=config.nlayers, bidirectional=config.bidirectional, rnn_cell=config.cell)
 encoder = EncoderRNN(vocab_size, embedding, abstracts.abs_len, config.emsize, input_dropout_p=config.dropout, variable_lengths = False,
