@@ -142,7 +142,7 @@ class headline2abstractdataset(Dataset):
         self.data = corpus
 
     def _read_corpus(self, path):
-        with open(path, "r") as f:
+        with open(path, "r", encoding='utf-8') as f:
             lines = f.readlines()
         f.close()
         abstracts = []

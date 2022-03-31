@@ -30,7 +30,7 @@ class Config(object):
     emsize = 512
     nlayers = 1
     lr = 0.001
-    epochs = 1 ##### CHANGED: original 10
+    epochs = 10
     batch_size = 16 ##### CHANGED: from 240 to 16 to reduce memory consumption
     dropout = 0
     bidirectional = True
@@ -171,7 +171,7 @@ def train_epoches(dataset, model, n_epochs, teacher_forcing_ratio):
             for i in range(config.num_exams):
                 epoch_loss_list[i] += loss_list[i] * num_examples
 
-            if batch_idx != 0 and batch_idx % 200 == 0: ##### CHANGED: add debug print
+            if batch_idx != 0 and batch_idx % 1 == 0: ##### CHANGED: add debug print
                 print("batch: {}".format(batch_idx))
 
         for i in range(config.num_exams):
