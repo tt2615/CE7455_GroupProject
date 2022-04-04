@@ -171,7 +171,7 @@ def train_epoches(dataset, model, n_epochs, teacher_forcing_ratio):
             for i in range(config.num_exams):
                 epoch_loss_list[i] += loss_list[i] * num_examples
 
-            if batch_idx != 0 and batch_idx % 1 == 0: ##### CHANGED: add debug print
+            if batch_idx != 0 and batch_idx % 100 == 0: ##### CHANGED: add debug print
                 print("batch: {}".format(batch_idx))
 
         for i in range(config.num_exams):

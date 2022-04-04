@@ -1,6 +1,6 @@
 from random import shuffle
-# file1=open("raw_data_web_crawler.txt", 'r', encoding='utf-8')
-with open('raw_data_web_crawler.txt','r',encoding='utf-8') as file1:
+# file1=open("rawdata_web_crawler.txt", 'r', encoding='utf-8')
+with open('rawdata_web_crawler.txt','r',encoding='utf-8') as file1:
     lines=file1.readlines()
     file1.close()
     abs_t = []
