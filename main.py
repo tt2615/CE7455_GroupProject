@@ -21,7 +21,7 @@ from decoder.DecoderRNNFB import DecoderRNNFB
 
 from pprint import pprint
 sys.path.insert(0,'..')
-from eval import Evaluate
+from utils.eval import Evaluate
 
 
 ### NOTE: adjust/add hyperparameters here
@@ -34,28 +34,12 @@ class Config(object):
     batch_size = 16 ##### CHANGED: from 240 to 16 to reduce memory consumption
     dropout = 0
     bidirectional = True
-    relative_data_path = '/data/train.dat'
+    relative_train_path = '/data/train.dat'
     relative_dev_path = '/data/dev.dat'
+    relative_test_path = '/data/test.dat'
     relative_gen_path = '/data/fake%d.dat'
     max_grad_norm = 10
     min_freq = 5
-    num_exams = 3
-
-
-class ConfigTest(object):
-    cell = "GRU"
-    emsize = 3
-    nlayers = 1
-    lr = 1
-    epochs = 3
-    batch_size = 2
-    dropout = 0
-    bidirectional = True
-    relative_data_path = '/data/haha.dat'
-    relative_dev_path = '/data/haha.dat'
-    relative_gen_path = '/data/fake%d.dat'
-    max_grad_norm = 1
-    min_freq = 0
     num_exams = 3
 
 
@@ -68,7 +52,7 @@ parser.add_argument('--cuda', action='store_true',
 parser.add_argument('--save', type=str,  default='params.pkl',
                     help='path to save the final model')
 parser.add_argument('--mode', type=int,  default=0,
-                    help='train(0)/predict_sentence(1)/predict_file(2) or evaluate(3)')
+                    help='train(0)/predict sentence(1)/predict file(2)/evaluate(3)/continue train(4)')
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
@@ -80,11 +64,10 @@ if torch.cuda.is_available():
         torch.cuda.manual_seed(args.seed)
 
 config = Config()
-#config = ConfigTest()
 
 # cwd = os.getcwd()
 cwd = '.' ##### CHANGED: change to relative path to cope with windows system path
-data_path = cwd + config.relative_data_path
+data_path = cwd + config.relative_train_path
 vectorizer = Vectorizer(min_frequency=config.min_freq)
 abstracts = headline2abstractdataset(data_path, vectorizer, args.cuda, max_len=1000)
 print("number of training examples: %d" % len(abstracts))
@@ -111,7 +94,7 @@ optimizer = optim.Adam(model.parameters(), lr=config.lr)
 
 # Mask variable
 def _mask(prev_generated_seq):
-    prev_mask = torch.eq(prev_generated_seq, 1).double() ##### CHANGED: convert bool tensor to double to prevent error: 
+    prev_mask = torch.eq(prev_generated_seq, 1).double() ##### CHANGED: convert bool tensor to double to prevent error
     lengths = torch.argmax(prev_mask,dim=1)
     max_len = prev_generated_seq.size(1)
     mask = []
@@ -160,7 +143,7 @@ def train_epoches(dataset, model, n_epochs, teacher_forcing_ratio):
         epoch_examples_total = 0
         epoch_loss_list = [0] * config.num_exams
         for batch_idx, (source, target, input_lengths) in enumerate(train_loader):
-            input_variables = source
+            input_variables = source #[bz*title_len(padded)]
             target_variables = target
             # train model
             loss_list = train_batch(input_variables, input_lengths.tolist(),
@@ -242,7 +225,7 @@ if __name__ == "__main__":
         print("Start writing:")
         for i in range(num_exams):
             out_name = f_out_name % i
-            f_out = open(out_name, 'w')
+            f_out = open(out_name, 'w', encoding='utf-8')
             for j in range(len(title)):
                 f_out.write(title[j] + '\n' + outputs[i][j] + '\n\n')
                 if j % 100 == 0:
@@ -250,6 +233,7 @@ if __name__ == "__main__":
             f_out.close()
         f_out.close()
     elif args.mode == 3:
+        # evaluate
         model.load_state_dict(torch.load(args.save))
         print("model restored")
         dev_data_path = cwd + config.relative_dev_path
@@ -263,7 +247,7 @@ if __name__ == "__main__":
         cand, ref = predictor.preeval_batch(test_loader, len(abstracts), num_exams)
         scores = []
         fields = ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4", "METEOR", "ROUGE_L"]
-        for i in range(6):
+        for i in range(len(fields)):
             scores.append([])
         for i in range(num_exams):
             print("No.", i)
@@ -273,7 +257,7 @@ if __name__ == "__main__":
         with open('figure.pkl', 'wb') as f:
             pickle.dump((fields, scores), f)
     elif args.mode == 4:
-        # predict sentence
+        # continue train
         model.load_state_dict(torch.load(args.save))
         print("model restored")
         # train

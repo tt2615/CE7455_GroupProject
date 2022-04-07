@@ -1,6 +1,10 @@
 import pickle
 import collections
 
+import sys
+from os import path
+sys.path.append(path.dirname( path.dirname( path.abspath(__file__) ) ) )
+
 from evaluator.bleu.bleu import Bleu
 from evaluator.rouge.rouge import Rouge
 from evaluator.meteor.meteor import Meteor

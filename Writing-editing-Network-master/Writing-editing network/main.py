@@ -16,7 +16,7 @@ from seq2seq.DecoderRNNFB import DecoderRNNFB
 from predictor import Predictor
 from pprint import pprint
 sys.path.insert(0,'..')
-from eval import Evaluate
+from utils.eval import Evaluate
 
 
 class Config(object):
