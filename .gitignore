@@ -104,3 +104,8 @@ Pipfile.lock
 
 # potential large file 
 *params.pkl
+
+# generated files
+data/fake0.dat
+data/fake1.dat
+data/fake2.dat

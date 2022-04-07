@@ -9,9 +9,9 @@ with open('rawdata_web_crawler.txt','r',encoding='utf-8') as file1:
     i = 0
     for line in lines:
         if i % 3 == 0:
-            titles.append(line)
+            titles.append(line.lower())
         elif i % 3 == 1:
-            abstracts.append(line)
+            abstracts.append(line.lower())
         i += 1
     for i in range(len(abstracts)):
         if len(titles[i]) > 0 and len(abstracts[i]) > 0:
@@ -42,3 +42,11 @@ with open('train.dat','w',encoding='utf-8') as file1:
         file1.writelines(abs_t[i][1])
         file1.writelines("\n")
     file1.close()
+
+with open('total.dat','w',encoding='utf-8') as file1:
+    for i in range(total):
+        file1.writelines(abs_t[i][0])
+        file1.writelines(abs_t[i][1])
+        file1.writelines("\n")
+    file1.close()
+

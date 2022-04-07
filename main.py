@@ -70,7 +70,6 @@ cwd = '.' ##### CHANGED: change to relative path to cope with windows system pat
 data_path = cwd + config.relative_train_path
 vectorizer = Vectorizer(min_frequency=config.min_freq)
 abstracts = headline2abstractdataset(data_path, vectorizer, args.cuda, max_len=1000)
-print("number of training examples: %d" % len(abstracts))
 
 vocab_size = abstracts.vectorizer.vocabulary_size
 
@@ -174,6 +173,7 @@ if __name__ == "__main__":
         # train
         try:
             print("start training...")
+            print("number of training examples: %d" % len(abstracts))
             train_epoches(abstracts, model, config.epochs, teacher_forcing_ratio=1)
         except KeyboardInterrupt:
             print('-' * 89)

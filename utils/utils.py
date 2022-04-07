@@ -174,7 +174,7 @@ class headline2abstractdataset(Dataset):
     #sentence to word id
     def _vectorize_corpus(self):
         if not self.vectorizer.vocabulary:
-            self.vectorizer.fit(self.corpus)
+            self.vectorizer.fit(self._read_corpus('./data/total.dat'))
         return self.vectorizer.transform(self.corpus)
 
     def __getitem__(self, index):
