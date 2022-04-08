@@ -9,13 +9,14 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 import numpy as np
 from torch.backends import cudnn
-from utils.utils import Vectorizer, headline2abstractdataset
+from utils.utils import Vectorizer, BertVectorizer, headline2abstractdataset
 from utils.fb_seq2seq import FbSeq2seq
 from utils.predictor import Predictor
 
 ### NOTE: import embedder, encoder and decoders here
 # baseline
 from embedder.NormalEmbedder import NormalEmbedder
+from embedder.BertEmbedder import BertEmbedder
 from encoder.EncoderRNN import EncoderRNN
 from decoder.DecoderRNNFB import DecoderRNNFB
 
@@ -41,6 +42,7 @@ class Config(object):
     max_grad_norm = 10
     min_freq = 5
     num_exams = 3
+    bert = True
 
 
 cudnn.benchmark = True
@@ -68,14 +70,35 @@ config = Config()
 # cwd = os.getcwd()
 cwd = '.' ##### CHANGED: change to relative path to cope with windows system path
 data_path = cwd + config.relative_train_path
-vectorizer = Vectorizer(min_frequency=config.min_freq)
+
+if config.bert:
+    vectorizer = BertVectorizer(min_frequency=config.min_freq)
+else:
+    vectorizer = Vectorizer(min_frequency=config.min_freq)
 abstracts = headline2abstractdataset(data_path, vectorizer, args.cuda, max_len=1000)
+# if config.bert:
+#     print(abstracts.data[0])
+#     print(abstracts.vectorizer.tokenizer.decode(12))
+#     print(abstracts.vectorizer.tokenizer.decode(62))
+#     print([abstracts.vectorizer.tokenizer.decode(x) for x in [20950, 7705, 1998, 2049, 13494, 2005, 1996, 2458, 1997, 3019, 2653, 6364, 0, 0]])
+#     print(abstracts.corpus[0][0])
+    
+# else:
+#     print(abstracts.vectorizer.idx2word[14])
+#     print(abstracts.vectorizer.idx2word[64])
+#     print([abstracts.vectorizer.idx2word[x] for x in [48, 832, 192, 27, 267, 5503, 86, 48, 757, 29, 39, 40, 41, 833, 0, 0]])
+#     print(abstracts.data[0])
+#     print(abstracts.vectorizer.idx2word[abstracts.data[0][0]])
+#     print(abstracts.corpus[0][0])
 
 vocab_size = abstracts.vectorizer.vocabulary_size
 
 ### NOTE: change embedder, encoder, decoder here
-#baseline
-embedding = NormalEmbedder(vocab_size, config.emsize, padding_idx=0)
+if config.bert:
+    embedding = BertEmbedder()
+    config.emsize = embedding.embed.weight.shape[1] #use standard bert embedding 768
+else:
+    embedding = NormalEmbedder(vocab_size, config.emsize, padding_idx=0)
 encoder_title = EncoderRNN(vocab_size, embedding, abstracts.head_len, config.emsize, input_dropout_p=config.dropout,
                      n_layers=config.nlayers, bidirectional=config.bidirectional, rnn_cell=config.cell)
 encoder = EncoderRNN(vocab_size, embedding, abstracts.abs_len, config.emsize, input_dropout_p=config.dropout, variable_lengths = False,

@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import Dataset
 from collections import Counter
 import re
+from transformers import BertTokenizer
 
 #provide embeddings for text
 def load_embeddings(path, word2idx, embedding_dim=256):
@@ -103,13 +104,46 @@ class Vectorizer:
             vcorpus.extend([self.transform_sentence(sentence) for sentence in corpus])
         return vcorpus
 
+class BertVectorizer:
+    """
+        Bert Tokenizer Proxy
+        implemented same API fit() and transform()
+    """
+    def __init__(self, max_words=None, min_frequency=None, start_end_tokens=True, maxlen=None):
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        self.vocabulary = self.tokenizer.vocab_files_names
+        self.vocabulary_size = self.tokenizer.vocab_size
+    
+    def fit(self, corpus, template = False):
+        """Do not neet to fit as bert has its own fixed encoding"""
+        pass
+
+    def transform_sentence(self, sentence):
+        """
+        Vectorize a single sentence
+        """
+        return self.tokenizer.convert_tokens_to_ids(sentence)
+
+    def transform(self, corpus, template = False):
+        """
+        Vectorizes a corpus in the form of a list of lists.
+        A corpus is a list of documents and a document is a list of sentence.
+        """
+        vcorpus = []
+        if not template:
+            for document in corpus:
+                vcorpus.append([self.transform_sentence(sentence) for sentence in document])
+        else:
+            vcorpus.extend([self.transform_sentence(sentence) for sentence in corpus])
+        return vcorpus
+
 class headline2abstractdataset(Dataset):
     def __init__(self, path, vectorizer, USE_CUDA=torch.cuda.is_available(), max_len=200):
         self.head_len = 0
         self.abs_len = 0
         self.max_len = max_len
-        self.corpus = self._read_corpus(path)
         self.vectorizer = vectorizer
+        self.corpus = self._read_corpus(path)
         self.data = self._vectorize_corpus()
         self._initalcorpus()
         self.USE_CUDA = USE_CUDA
