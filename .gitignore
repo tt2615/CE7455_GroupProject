@@ -103,7 +103,7 @@ Pipfile.lock
 .mypy_cache/
 
 # potential large file 
-*params.pkl
+*.pkl
 
 # generated files
 data/fake0.dat

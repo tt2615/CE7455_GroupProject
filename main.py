@@ -28,7 +28,8 @@ from utils.eval import Evaluate
 ### NOTE: adjust/add hyperparameters here
 class Config(object):
     cell = "GRU"
-    emsize = 512
+    bert = True
+    emsize = 768 if bert else 512
     nlayers = 1
     lr = 0.001
     epochs = 10
@@ -41,9 +42,10 @@ class Config(object):
     relative_gen_path = '/data/fake%d.dat'
     max_grad_norm = 10
     min_freq = 5
-    num_exams = 3
-    bert = True
+    num_exams = 1
+    
 
+config = Config()
 
 cudnn.benchmark = True
 parser = argparse.ArgumentParser(description='seq2seq model')
@@ -51,7 +53,7 @@ parser.add_argument('--seed', type=int, default=2022,
                     help='random seed')
 parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
-parser.add_argument('--save', type=str,  default='params.pkl',
+parser.add_argument('--save', type=str,  default='params_bert.pkl' if config.bert else 'params.pkl',
                     help='path to save the final model')
 parser.add_argument('--mode', type=int,  default=0,
                     help='train(0)/predict sentence(1)/predict file(2)/evaluate(3)/continue train(4)')
@@ -64,8 +66,6 @@ if torch.cuda.is_available():
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
     else:
         torch.cuda.manual_seed(args.seed)
-
-config = Config()
 
 # cwd = os.getcwd()
 cwd = '.' ##### CHANGED: change to relative path to cope with windows system path
@@ -95,8 +95,7 @@ vocab_size = abstracts.vectorizer.vocabulary_size
 
 ### NOTE: change embedder, encoder, decoder here
 if config.bert:
-    embedding = BertEmbedder()
-    config.emsize = embedding.embed.weight.shape[1] #use standard bert embedding 768
+    embedding = BertEmbedder(vocab_size, config.emsize, abstracts.vectorizer)
 else:
     embedding = NormalEmbedder(vocab_size, config.emsize, padding_idx=0)
 encoder_title = EncoderRNN(vocab_size, embedding, abstracts.head_len, config.emsize, input_dropout_p=config.dropout,

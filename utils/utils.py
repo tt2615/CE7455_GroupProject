@@ -104,25 +104,88 @@ class Vectorizer:
             vcorpus.extend([self.transform_sentence(sentence) for sentence in corpus])
         return vcorpus
 
-class BertVectorizer:
+class BertVectorizer():
     """
         Bert Tokenizer Proxy
-        implemented same API fit() and transform()
+        added conversion from local id to bert id
     """
     def __init__(self, max_words=None, min_frequency=None, start_end_tokens=True, maxlen=None):
+
+        self.vocabulary = None
+        self.vocabulary_size = 0
+        self.word2idx = dict()
+        self.idx2word = dict()
+        #most common words
+        self.max_words = max_words
+        #least common words
+        self.min_frequency = min_frequency
+        self.start_end_tokens = start_end_tokens
+        self.maxlen = maxlen
+
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-        self.vocabulary = self.tokenizer.vocab_files_names
-        self.vocabulary_size = self.tokenizer.vocab_size
-    
+        self.idx2bert = dict() #convert vocab to bert index
+
+    def _find_max_sentence_length(self, corpus, template):
+        if not template:
+            self.maxlen = max(len(sent) for document in corpus for sent in document)
+        else:
+            self.maxlen = max(len(sent) for sent in corpus)
+        if self.start_end_tokens:
+            self.maxlen += 2
+
+    def _build_vocabulary(self, corpus, template):
+        if not template:
+            vocabulary = Counter(word for document in corpus for sent in document for word in sent)
+        else:
+            vocabulary = Counter(word for sent in corpus for word in sent)
+        if self.max_words:
+            vocabulary = {word: freq for word,
+                          freq in vocabulary.most_common(self.max_words)}
+        if self.min_frequency:
+            vocabulary = {word: freq for word, freq in vocabulary.items()
+                          if freq >= self.min_frequency}
+        self.vocabulary = vocabulary
+        self.vocabulary_size = len(vocabulary) + 2  # padding and unk tokens
+        if self.start_end_tokens:
+            self.vocabulary_size += 2
+
+    #override
+    def _build_word_index(self):
+        
+        self.word2idx['<UNK>'] = 3
+        self.word2idx['<PAD>'] = 0
+
+        if self.start_end_tokens:
+            self.word2idx['<EOS>'] = 1
+            self.word2idx['<SOS>'] = 2
+
+        offset = len(self.word2idx)
+        for idx, word in enumerate(self.vocabulary):
+            self.word2idx[word] = idx + offset
+            #add bert index
+            bert_id = self.tokenizer.convert_tokens_to_ids([word])[0]
+            if bert_id != 100: #found token in bert pretrained
+                self.idx2bert[idx + offset] = self.tokenizer.convert_tokens_to_ids([word])[0]
+        self.idx2word = {idx: word for word, idx in self.word2idx.items()}
+
     def fit(self, corpus, template = False):
-        """Do not neet to fit as bert has its own fixed encoding"""
-        pass
+        if not self.maxlen:
+            self._find_max_sentence_length(corpus, template)
+        self._build_vocabulary(corpus, template)
+        self._build_word_index()
+
+    def add_start_end(self, vector):
+        vector.append(self.word2idx['<EOS>'])
+        return [self.word2idx['<SOS>']] + vector
 
     def transform_sentence(self, sentence):
         """
         Vectorize a single sentence
         """
-        return self.tokenizer.convert_tokens_to_ids(sentence)
+        vector = [self.word2idx.get(word, 3) for word in sentence]
+        if self.start_end_tokens:
+            vector = self.add_start_end(vector)
+        return vector
 
     def transform(self, corpus, template = False):
         """
@@ -136,6 +199,8 @@ class BertVectorizer:
         else:
             vcorpus.extend([self.transform_sentence(sentence) for sentence in corpus])
         return vcorpus
+
+
 
 class headline2abstractdataset(Dataset):
     def __init__(self, path, vectorizer, USE_CUDA=torch.cuda.is_available(), max_len=200):
